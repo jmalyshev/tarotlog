@@ -1,0 +1,40 @@
+{
+  "name": "tarotlog",
+  "version": "0.1.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
+  },
+  "dependencies": {
+    "@react-native-community/datetimepicker": "8.4.4",
+    "@react-navigation/native": "^6.1.7",
+    "@react-navigation/native-stack": "^6.9.12",
+    "@supabase/supabase-js": "^2.0.0",
+    "@types/react": "~19.1.10",
+    "expo": "^54.0.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-draggable-flatlist": "^4.0.2",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-web": "^0.21.0",
+    "typescript": "^5.1.3",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "eslint": "^8.38.0",
+    "babel-preset-expo": "~54.0.10",
+    "@babel/plugin-transform-private-methods": "^7.20.0",
+    "@babel/plugin-transform-class-properties": "^7.20.0",
+    "@babel/plugin-transform-private-property-in-object": "^7.20.0",
+    "react-refresh": "^0.14.0"
+  }
+}

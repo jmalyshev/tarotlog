@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "TarotLog",
+    "slug": "tarotlog",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "sdkVersion": "54.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "extra": {},
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}
