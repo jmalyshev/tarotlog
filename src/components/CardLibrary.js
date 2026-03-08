@@ -7,22 +7,27 @@ export default function CardLibrary({ onAddCard }) {
 
   const results = useMemo(() => {
     const term = (q || '').trim().toLowerCase();
-    if (!term) return TAROT_DECK.slice(0, 12);
+    if (!term) return [];
     return TAROT_DECK.filter(c => c.name.toLowerCase().includes(term));
   }, [q]);
 
   return (
     <View style={styles.library}>
-      <Text style={styles.title}>Card Library</Text>
-      <TextInput placeholder="Search cards..." value={q} onChangeText={setQ} style={styles.search} />
+      <TextInput placeholder="Search cards..." value={q} onChangeText={setQ} style={styles.search} autoFocus={false} />
 
-      <ScrollView contentContainerStyle={{ paddingVertical: 8 }} style={styles.results}>
-        {results.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.resultItem} onPress={() => { setQ(''); onAddCard(item); }}>
-            <Text>{item.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {q.trim().length > 0 && (
+        <ScrollView contentContainerStyle={{ paddingVertical: 8 }} style={styles.results}>
+          {results.length === 0 ? (
+            <Text style={styles.empty}>No cards match "{q}"</Text>
+          ) : (
+            results.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.resultItem} onPress={() => { setQ(''); onAddCard(item); }}>
+                <Text>{item.name}</Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -33,4 +38,6 @@ const styles = StyleSheet.create({
   search: { borderWidth: 1, borderColor: '#ddd', padding: 8, borderRadius: 6 },
   results: { maxHeight: 200, marginTop: 8 },
   resultItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#f1f1f1' }
+  ,
+  empty: { color: '#666', padding: 10 }
 });

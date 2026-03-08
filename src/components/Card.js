@@ -10,6 +10,7 @@ export default function Card({ title }) {
 }
 
 const styles = StyleSheet.create({
-  card: { width: 120, height: 160, backgroundColor: '#fff', borderRadius: 8, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-  text: { fontSize: 14, textAlign: 'center' }
+  // slightly smaller card size for better fit on canvas
+  card: { width: 100, height: 140, backgroundColor: '#fff', borderRadius: 8, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 3, elevation: 2 },
+  text: { fontSize: 13, textAlign: 'center' }
 });

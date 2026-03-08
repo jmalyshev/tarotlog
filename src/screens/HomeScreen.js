@@ -4,11 +4,10 @@ import { useStore } from '../store/useStore';
 
 export default function HomeScreen({ navigation }) {
   const notes = useStore((s) => s.notes);
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>TarotLog</Text>
-      
+
       <Text style={styles.sectionTitle}>Journal Entries</Text>
       <ScrollView style={styles.list}>
         {notes.length === 0 && <Text style={styles.empty}>No notes yet. Tap + to add one.</Text>}
