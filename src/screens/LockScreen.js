@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Button, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Button, Alert, ImageBackground, TouchableOpacity } from 'react-native';
 import { hasPassword, setPassword, verifyPassword, loadNotesEncrypted } from '../lib/localdb';
 import { useStore } from '../store/useStore';
 
@@ -72,23 +72,30 @@ export default function LockScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{exists ? 'Unlock TarotLog' : 'Set a password'}</Text>
-      <TextInput secureTextEntry placeholder="Password" value={password} onChangeText={setPass} style={styles.input} />
-      {exists ? (
-        <Button title="Unlock" onPress={handleUnlock} />
-      ) : (
-        <Button title="Set Password" onPress={handleSet} />
-      )}
-      {status ? <Text style={styles.status}>{status}</Text> : null}
-    </View>
+    <ImageBackground source={require('../assets/starry-background.png')} style={{ flex: 1 }} onError={() => console.warn('Background image not found')}>
+      <View style={styles.container}>
+        <Text style={styles.title}>{exists ? 'Unlock TarotLog' : 'Set a password'}</Text>
+        <TextInput secureTextEntry placeholder="Password" value={password} onChangeText={setPass} style={styles.input} placeholderTextColor="#999" />
+        {exists ? (
+          <TouchableOpacity style={styles.btn} onPress={handleUnlock}>
+            <Text style={styles.btnText}>Unlock</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.btn} onPress={handleSet}>
+            <Text style={styles.btnText}>Set Password</Text>
+          </TouchableOpacity>
+        )}
+        {status ? <Text style={styles.status}>{status}</Text> : null}
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, justifyContent: 'center' },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 12 },
-  input: { borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 12 }
-  ,
-  status: { marginTop: 12, color: '#333' }
+  container: { flex: 1, padding: 20, justifyContent: 'center', alignItems: 'center' },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: 24, color: '#fff', textAlign: 'center' },
+  input: { width: '100%', maxWidth: 300, borderWidth: 1, borderColor: '#ccc', padding: 12, marginBottom: 16, backgroundColor: '#fff', color: '#333', borderRadius: 8, fontSize: 16 },
+  btn: { backgroundColor: '#fff', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, minWidth: 140, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  btnText: { color: '#333', fontSize: 16, fontWeight: '700' },
+  status: { marginTop: 16, color: '#fff', fontSize: 14, textAlign: 'center' }
 });
