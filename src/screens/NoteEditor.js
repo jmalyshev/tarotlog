@@ -13,7 +13,8 @@ export default function NoteEditor({ navigation, route }) {
   const [showPicker, setShowPicker] = useState(false);
   const [text, setText] = useState('');
   const [cards, setCards] = useState([]);
-  const [spreadData, setSpreadData] = useState(null); // Store template info
+  const [returnKey, setReturnKey] = useState(null);
+  const pendingForReturnKey = useStore(state => (returnKey ? state.pendingSpreads[returnKey] : undefined));
 
   const editingId = route?.params?.noteId;
 
@@ -24,22 +25,35 @@ export default function NoteEditor({ navigation, route }) {
         setDate(new Date(note.date));
         setText(note.text || '');
         setCards(note.cards || []);
-        setSpreadData(note.spreadData || null);
       }
     }
   }, [editingId, notes]);
 
+  // Listen for updatedCards set by SpreadBuilder via setParams on this route
+  useEffect(() => {
+    if (route?.params?.updatedCards) {
+      setCards(route.params.updatedCards || []);
+      // clear the param so it's not processed again
+      try { navigation.setParams({ updatedCards: undefined }); } catch (e) {}
+    }
+  }, [route?.params?.updatedCards]);
+
+  // Subscribe to pending spread returns (set by SpreadBuilder via store)
+  useEffect(() => {
+    if (!returnKey) return;
+    if (pendingForReturnKey) {
+      setCards(pendingForReturnKey || []);
+      try { useStore.getState().clearPendingSpread(returnKey); } catch (e) {}
+      setReturnKey(null);
+    }
+  }, [pendingForReturnKey, returnKey]);
+
   function onSave() {
     const now = new Date().toISOString();
-    const noteData = { date: date.toISOString(), text, cards, updated_at: now };
-    if (spreadData) {
-      noteData.spreadData = spreadData;
-    }
-    
     if (editingId) {
-      updateNote(editingId, noteData);
+      updateNote(editingId, { date: date.toISOString(), text, cards, updated_at: now });
     } else {
-      const note = { id: Date.now().toString(), created_at: now, ...noteData };
+      const note = { id: Date.now().toString(), date: date.toISOString(), text, cards, created_at: now, updated_at: now };
       addNote(note);
     }
     // persist locally (encrypted) using last unlocked password stored in memory
@@ -78,9 +92,13 @@ export default function NoteEditor({ navigation, route }) {
           </View>
         </ScrollView>
 
-        <View style={[styles.footer, { height: FOOTER_HEIGHT }]}> 
+          <View style={[styles.footer, { height: FOOTER_HEIGHT }]}> 
           <View style={styles.footerInner}>
-            <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('SpreadBuilder', { initialCards: cards, spreadData, onDone: (next, newSpreadData) => { setCards(next); if (newSpreadData) setSpreadData(newSpreadData); } })}>
+            <TouchableOpacity style={styles.btn} onPress={() => {
+              const key = `ret-${Date.now()}`;
+              setReturnKey(key);
+              navigation.navigate('SpreadBuilder', { initialCards: cards, returnKey: key });
+            }}>
               <Text style={styles.btnText}>Builder</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.btn} onPress={onSave}>
@@ -96,6 +114,11 @@ export default function NoteEditor({ navigation, route }) {
     </ImageBackground>
   );
 }
+
+// Listen for updatedCards set by SpreadBuilder via setParams on this route
+// (removed duplicate effect - handling of updatedCards is already inside the component)
+
+  
 
 const styles = StyleSheet.create({
   container: { padding: 16 },

@@ -40,6 +40,6 @@ export default function SpreadPreview({ cards = [] }) {
 }
 
 const styles = StyleSheet.create({
-  container: { position: 'relative', backgroundColor: 'transparent', alignSelf: 'center' },
+  container: { position: 'relative', backgroundColor: 'transparent' },
   cardWrapper: { position: 'absolute' }
 });

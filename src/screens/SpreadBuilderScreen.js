@@ -1,35 +1,211 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, Animated, PanResponder, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, ImageBackground, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, ImageBackground, ScrollView, Modal } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import ErrorBoundary from '../components/ErrorBoundary';
-import Card from '../components/Card';
+import { useStore } from '../store/useStore';
 import CardLibrary from '../components/CardLibrary';
+import DraggableCardRH from '../components/DraggableCardRH';
 import { SPREAD_TEMPLATES } from '../data/spread_templates';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CANVAS_HEIGHT = 500;
 
-export function SpreadBuilder({ initialCards = [], spreadData = null, onChange, onDone }) {
+export function SpreadBuilder({ initialCards = [], onChange, onDone }) {
   const [placedCards, setPlacedCards] = useState(initialCards);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [selectedTemplate, setSelectedTemplate] = useState(spreadData?.templateName ? Object.values(SPREAD_TEMPLATES).find(t => t.name === spreadData.templateName) || null : null);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState(null);
   const [cardLibraryOpen, setCardLibraryOpen] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ width: SCREEN_WIDTH, height: CANVAS_HEIGHT });
 
-  // keep internal state in sync if initialCards prop changes (e.g., when opening with saved cards)
   useEffect(() => {
     setPlacedCards(initialCards || []);
   }, [initialCards]);
 
-  // Simple prototype: when a card is selected from library, push a placed card with center position
+  function scalePos(pos, { width, height }) {
+    if (!pos) return { x: 0, y: 0 };
+    if (pos.xPct != null && pos.yPct != null) {
+      const x = Math.round(pos.xPct * width);
+      const y = Math.round(pos.yPct * height);
+      return { x, y };
+    }
+    const BASE_W = 360;
+    const BASE_H = 500;
+    const x = Math.round((pos.x / BASE_W) * width);
+    const y = Math.round((pos.y / BASE_H) * height);
+    return { x, y };
+  }
+
+  // compute card size dynamically from canvas size to avoid overlaps on different screens
+  const cardWidth = Math.round(Math.max(48, Math.min(120, canvasSize.width * 0.25)));
+  const cardHeight = Math.round(cardWidth * 1.4);
+
+  // compute template positions scaled to the current canvas and card size
+  // returns { positions: [...], effectiveCardWidth, effectiveCardHeight }
+  function computeTemplatePositionsScaled(template) {
+    if (!template || !template.positions) return { positions: [], effectiveCardWidth: cardWidth, effectiveCardHeight: cardHeight };
+    const { width, height } = canvasSize;
+    const positions = template.positions;
+    const baseGap = Math.round(cardWidth * 0.25);
+
+    // helper to compute a scale factor so content fits within padding
+    function calcScale(totalSize, containerSize, padding = 32) {
+      if (totalSize <= containerSize - padding) return 1;
+      return Math.max(0.5, (containerSize - padding) / totalSize);
+    }
+
+    // ROW layout
+    if (template.layout === 'row') {
+      const n = positions.length;
+      const totalW = n * cardWidth + Math.max(0, n - 1) * baseGap;
+      const scale = calcScale(totalW, width);
+      const effW = Math.max(32, Math.round(cardWidth * scale));
+      const effH = Math.round(effW * 1.4);
+      const gap = Math.round(effW * 0.25);
+      const totalW2 = n * effW + Math.max(0, n - 1) * gap;
+      const startX = Math.round((width - totalW2) / 2);
+      const y = template.yPct != null ? Math.round(template.yPct * height) : Math.round(height * 0.35);
+      return {
+        positions: positions.map((p, i) => ({ ...p, x: startX + i * (effW + gap), y })),
+        effectiveCardWidth: effW,
+        effectiveCardHeight: effH
+      };
+    }
+
+    // PILLAR layout
+    if (template.layout === 'pillar') {
+      const n = positions.length;
+      const totalH = n * cardHeight + Math.max(0, n - 1) * baseGap;
+      const scale = calcScale(totalH, height);
+      const effH = Math.max(32, Math.round(cardHeight * scale));
+      const effW = Math.round(effH / 1.4);
+      const gap = Math.round(effH * 0.25);
+      const totalH2 = n * effH + Math.max(0, n - 1) * gap;
+      const startY = Math.round((height - totalH2) / 2);
+      const x = template.xPct != null ? Math.round(template.xPct * width) : Math.round(width * 0.5);
+      return {
+        positions: positions.map((p, i) => ({ ...p, x, y: startY + i * (effH + gap) })),
+        effectiveCardWidth: effW,
+        effectiveCardHeight: effH
+      };
+    }
+
+    // CROSS + PILLAR layout
+    if (template.layout === 'cross_pillar') {
+      // center the entire cluster+pillar block horizontally so it won't be cut off
+      const centerPct = template.centerPct || { x: 0.5, y: 0.5 };
+      const centerY = Math.round(centerPct.y * height);
+      // estimate central cluster size (3 across) and pillar
+      const clusterW = 3 * cardWidth + 2 * baseGap;
+      const pillarLen = Math.max(0, template.positions.length - 5);
+      const pillarWidth = pillarLen > 0 ? (cardWidth) : 0;
+      const totalW = clusterW + (pillarLen > 0 ? (baseGap + pillarWidth) : 0);
+      const totalH = Math.max(cardHeight * 3 + baseGap * 2, pillarLen * cardHeight + Math.max(0, pillarLen - 1) * baseGap);
+      const scale = Math.min(calcScale(totalW, width), calcScale(totalH, height));
+      const effW = Math.max(32, Math.round(cardWidth * scale));
+      const effH = Math.round(effW * 1.4);
+      const gap = Math.round(effW * 0.25);
+
+      const clusterWidth = 3 * effW + 2 * gap;
+      const pillarExists = pillarLen > 0;
+      const extraForPillar = pillarExists ? (gap + effW) : 0;
+      const blockTotalW = clusterWidth + extraForPillar;
+      const startX = Math.round((width - blockTotalW) / 2);
+      const leftX = startX;
+      const centerX = leftX + (effW + gap);
+      const rightX = leftX + 2 * (effW + gap);
+
+      const out = [];
+      // mapping: positions[0]=center, [1]=right, [2]=left, [3]=top, [4]=bottom
+      for (let i = 0; i < Math.min(5, positions.length); i++) {
+        const p = positions[i];
+        let x = centerX;
+        let y = centerY;
+        if (i === 0) { x = centerX; y = centerY; }
+        else if (i === 1) { x = rightX; y = centerY; }
+        else if (i === 2) { x = leftX; y = centerY; }
+        else if (i === 3) { x = centerX; y = centerY - (effH + gap); }
+        else if (i === 4) { x = centerX; y = centerY + (effH + gap); }
+        out.push({ ...p, x, y });
+      }
+      // pillar stacked to the right of the cluster
+      const pillar = positions.slice(5);
+      if (pillar.length > 0) {
+        const pillarX = leftX + clusterWidth + gap;
+        const totalH2 = pillar.length * effH + Math.max(0, pillar.length - 1) * gap;
+        const startY = Math.round(centerY - totalH2 / 2 + effH / 2);
+        pillar.forEach((p, i) => out.push({ ...p, x: pillarX, y: startY + i * (effH + gap) }));
+      }
+      return { positions: out, effectiveCardWidth: effW, effectiveCardHeight: effH };
+    }
+
+    // HORSESHOE layout (arc)
+    if (template.layout === 'horseshoe') {
+      const centerPct = template.centerPct || { x: 0.5, y: 0.35 };
+      const cx = centerPct.x * width;
+      const cy = centerPct.y * height;
+      const n = positions.length;
+      const padding = 24;
+      // initial guess for radius based on available space
+      const maxRadiusX = Math.min(cx - padding - cardWidth / 2, width - cx - padding - cardWidth / 2);
+      const maxRadiusY = Math.max(20, cy - padding - cardHeight / 2);
+      let radius = Math.min(width * 0.42, height * 0.35, maxRadiusX, maxRadiusY);
+      if (radius < 20) radius = Math.max(12, Math.floor(Math.min(width, height) / 10));
+      const startAngle = Math.PI * 0.85; // left-up
+      const endAngle = Math.PI * 0.15; // right-up
+
+      // helper to build positions given effW/effH and radius
+      const buildPositions = (effW, effH, r) => {
+        return positions.map((p, i) => {
+          const t = n === 1 ? 0.5 : i / Math.max(1, n - 1);
+          const angle = startAngle + t * (endAngle - startAngle);
+          const cardCenterX = Math.round(cx + Math.cos(angle) * r);
+          const cardCenterY = Math.round(cy + Math.sin(angle) * r);
+          return { ...p, x: cardCenterX - Math.round(effW / 2), y: cardCenterY - Math.round(effH / 2) };
+        });
+      };
+
+      // determine bounding span and scale if needed
+      let effW = cardWidth;
+      let effH = cardHeight;
+      let posCandidates = buildPositions(effW, effH, radius);
+      let minX = Math.min(...posCandidates.map(p => p.x));
+      let maxX = Math.max(...posCandidates.map(p => p.x + effW));
+      let span = maxX - minX;
+      const availW = width - padding * 2;
+      if (span > availW) {
+        const scale = Math.max(0.5, availW / span);
+        effW = Math.max(24, Math.round(effW * scale));
+        effH = Math.max(24, Math.round(effW * 1.4));
+        // shrink radius slightly to keep arc balanced
+        radius = Math.max(8, Math.round(radius * scale));
+        posCandidates = buildPositions(effW, effH, radius);
+      }
+
+      // final positions
+      return { positions: posCandidates, effectiveCardWidth: effW, effectiveCardHeight: effH };
+    }
+
+    // fallback: respect explicit xPct/yPct or legacy x/y
+    return { positions: positions.map(p => ({ ...p, ...scalePos(p, canvasSize) })), effectiveCardWidth: cardWidth, effectiveCardHeight: cardHeight };
+  }
+
+  const templateComputed = selectedTemplate ? computeTemplatePositionsScaled(selectedTemplate) : { positions: [], effectiveCardWidth: cardWidth, effectiveCardHeight: cardHeight };
+  const templatePositionsScaled = templateComputed.positions;
+  const effectiveCardWidth = templateComputed.effectiveCardWidth;
+  const effectiveCardHeight = templateComputed.effectiveCardHeight;
+
   function handleAddCard(card) {
     if (selectedPosition) {
-      // If a template position is selected, place the card there
+      // if we stored scaledX/scaledY when selecting the template, prefer them
+      const xPos = selectedPosition.scaledX != null ? selectedPosition.scaledX : scalePos(selectedPosition, canvasSize).x;
+      const yPos = selectedPosition.scaledY != null ? selectedPosition.scaledY : scalePos(selectedPosition, canvasSize).y;
       const newCard = {
         id: selectedPosition.id,
         card,
-        x: selectedPosition.x,
-        y: selectedPosition.y,
+        x: xPos,
+        y: yPos,
         positionLabel: selectedPosition.label
       };
       setPlacedCards((s) => {
@@ -41,12 +217,11 @@ export function SpreadBuilder({ initialCards = [], spreadData = null, onChange, 
       setSelectedPosition(null);
       setCardLibraryOpen(false);
     } else {
-      // Otherwise place at center
       const newCard = {
         id: `${card.id}-${Date.now()}`,
         card,
-        x: SCREEN_WIDTH / 2 - 60,
-        y: CANVAS_HEIGHT / 2 - 80
+        x: Math.round(canvasSize.width / 2 - 50),
+        y: Math.round(canvasSize.height / 2 - 70)
       };
       setPlacedCards((s) => {
         const next = [...s, newCard];
@@ -62,6 +237,22 @@ export function SpreadBuilder({ initialCards = [], spreadData = null, onChange, 
       onChange?.(next);
       return next;
     });
+  }
+
+  function snapToSlot(x, y, positions, threshold = 48) {
+    if (!positions || positions.length === 0) return null;
+    let closest = null;
+    let minDist = Infinity;
+    positions.forEach(p => {
+      const dx = p.x - x;
+      const dy = p.y - y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = p;
+      }
+    });
+    return minDist <= threshold ? closest : null;
   }
 
   useEffect(() => {
@@ -82,9 +273,6 @@ export function SpreadBuilder({ initialCards = [], spreadData = null, onChange, 
         style={styles.backgroundContainer}
         resizeMode="cover"
         defaultSource={require('../assets/starry-background.png')}
-        onError={() => {
-          // If image fails to load, will use fallback backgroundColor
-        }}
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Spread Builder</Text>
@@ -92,32 +280,38 @@ export function SpreadBuilder({ initialCards = [], spreadData = null, onChange, 
             <Text style={styles.templateBtnText}>{selectedTemplate?.name || 'Choose Template'}</Text>
           </TouchableOpacity>
         </View>
-        
+
         <CardLibrary onAddCard={handleAddCard} />
-        
+
         <View
           style={styles.canvas}
-          // Dismiss keyboard when user taps the canvas area (Android behavior)
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setCanvasSize({ width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height)) });
+          }}
           onStartShouldSetResponder={() => {
             if (keyboardHeight) Keyboard.dismiss();
             return false;
           }}
         >
-          {/* Template position outlines */}
-          {selectedTemplate && selectedTemplate.positions.map((pos) => {
+          {selectedTemplate && templatePositionsScaled.map((pos) => {
+            const scaledX = pos.x;
+            const scaledY = pos.y;
             const hasCard = placedCards.find(c => c.id === pos.id);
             return (
               <TouchableOpacity
                 key={pos.id}
                 style={[
                   styles.positionOutline,
-                  { left: pos.x, top: pos.y },
+                  { left: scaledX, top: scaledY, width: effectiveCardWidth, height: effectiveCardHeight },
                   hasCard && styles.positionFilled,
                   selectedPosition?.id === pos.id && styles.positionSelected
                 ]}
                 onPress={() => {
                   if (!hasCard) {
-                    setSelectedPosition(pos);
+                    // store the scaled coordinates on the selectedPosition so
+                    // the card will be placed exactly where the outline is
+                    setSelectedPosition({ ...pos, scaledX, scaledY });
                     setCardLibraryOpen(true);
                   }
                 }}
@@ -126,21 +320,33 @@ export function SpreadBuilder({ initialCards = [], spreadData = null, onChange, 
               </TouchableOpacity>
             );
           })}
-          
-          {/* Placed cards */}
+
           {placedCards.map((pc) => (
-            <DraggableCard key={pc.id} data={pc} onMove={(x,y) => updateCardPos(pc.id,x,y)} />
+            <DraggableCardRH
+              key={pc.id}
+              data={pc}
+              cardWidth={effectiveCardWidth}
+              cardHeight={effectiveCardHeight}
+              onDrop={(id, x, y) => {
+                const slot = snapToSlot(x, y, templatePositionsScaled, Math.max(24, Math.round(effectiveCardWidth / 2)));
+                if (slot) {
+                  updateCardPos(id, slot.x, slot.y);
+                } else {
+                  updateCardPos(id, x, y);
+                }
+              }}
+            />
           ))}
         </View>
+
         {onDone && (
           <View style={styles.doneWrap}>
-            <TouchableOpacity style={styles.doneBtn} onPress={() => onDone(placedCards, selectedTemplate ? { templateName: selectedTemplate.name } : null)}>
+            <TouchableOpacity style={styles.doneBtn} onPress={() => onDone(placedCards)}>
               <Text style={styles.doneText}>Done</Text>
             </TouchableOpacity>
           </View>
         )}
-        
-        {/* Template Selection Modal */}
+
         <Modal
           visible={templateModalVisible}
           transparent
@@ -158,7 +364,7 @@ export function SpreadBuilder({ initialCards = [], spreadData = null, onChange, 
                     onPress={() => {
                       setSelectedTemplate(template);
                       setTemplateModalVisible(false);
-                      setPlacedCards([]); // Clear cards when changing template
+                      setPlacedCards([]);
                       setSelectedPosition(null);
                     }}
                   >
@@ -180,13 +386,22 @@ export function SpreadBuilder({ initialCards = [], spreadData = null, onChange, 
 
 export default function SpreadBuilderScreen({ navigation, route }) {
   const initialCards = route?.params?.initialCards ?? [];
-  const spreadData = route?.params?.spreadData ?? null;
-  // route.params.onDone may be a function passed from NoteEditor; create a wrapper to call it and goBack
-  const tryCallAndGoBack = (cards, newSpreadData) => {
+  const tryCallAndGoBack = (cards) => {
     try {
-      route?.params?.onDone?.(cards, newSpreadData);
+      const prevKey = route?.params?.prevKey;
+      const returnKey = route?.params?.returnKey;
+      if (prevKey) {
+        // set params on the previous route (NoteEditor) so it can pick up updated cards
+        navigation.dispatch(CommonActions.setParams({ params: { updatedCards: cards }, key: prevKey }));
+      } else if (returnKey) {
+        // write returned cards to the store for the NoteEditor to pick up
+        try { useStore.getState().setPendingSpread(returnKey, cards); } catch (e) { /* ignore */ }
+      } else if (route?.params?.onDone) {
+        // fallback for older callers that passed a function (not recommended)
+        try { route.params.onDone(cards); } catch (e) { /* ignore */ }
+      }
     } catch (e) {
-      // fallthrough
+      // ignore
     }
     navigation.goBack();
   };
@@ -194,36 +409,9 @@ export default function SpreadBuilderScreen({ navigation, route }) {
   return (
     <ErrorBoundary>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={80}>
-        <SpreadBuilder initialCards={initialCards} spreadData={spreadData} onDone={tryCallAndGoBack} />
+        <SpreadBuilder initialCards={initialCards} onDone={tryCallAndGoBack} />
       </KeyboardAvoidingView>
     </ErrorBoundary>
-  );
-}
-
-function DraggableCard({ data, onMove }) {
-  const pan = useRef(new Animated.ValueXY({ x: data.x, y: data.y })).current;
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        pan.setOffset({ x: pan.x._value, y: pan.y._value });
-      },
-      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
-      onPanResponderRelease: () => {
-        pan.flattenOffset();
-        onMove(pan.x._value, pan.y._value);
-      }
-    })
-  ).current;
-
-  return (
-    <Animated.View
-      style={[styles.cardWrapper, { transform: pan.getTranslateTransform() }]}
-      {...panResponder.panHandlers}
-    >
-      <Card title={data.card.name} />
-    </Animated.View>
   );
 }
 

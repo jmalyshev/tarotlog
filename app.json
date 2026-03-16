@@ -27,11 +27,15 @@
         "image": "./src/assets/launch.png",
         "resizeMode": "cover",
         "backgroundColor": "#1a1a2e"
-      }
+      },
+      "package": "com.juliemalyshev.tarotlog"
     },
     "extra": {
       "SUPABASE_URL": "https://olmexztsrjjtkccyjlsb.supabase.co",
-      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbWV4enRzcmpqdGtjY3lqbHNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTIyOTksImV4cCI6MjA4ODQ2ODI5OX0.H13ppFn5PbIYAYGP3P2PWdD-eFhCB2LiV1OyXa8TZXs"
+      "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sbWV4enRzcmpqdGtjY3lqbHNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTIyOTksImV4cCI6MjA4ODQ2ODI5OX0.H13ppFn5PbIYAYGP3P2PWdD-eFhCB2LiV1OyXa8TZXs",
+      "eas": {
+        "projectId": "dda0e655-67f8-4352-a402-68500292dbb8"
+      }
     },
     "plugins": [
       "@react-native-community/datetimepicker",

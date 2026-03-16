@@ -1,51 +1,69 @@
 // Spread templates with named positions
+// Coordinates chosen to be reasonably centered for typical phone widths
+// and spaced so cards don't overlap. If you want to tweak spacing,
+// adjust the X/Y values below.
 export const SPREAD_TEMPLATES = {
   threeCard: {
     name: 'Three Card Spread',
     description: 'Past, Present, Future',
+    // layout: 'row' means positions should be laid out in a centered row
+    // positions include an id/label but xPct/yPct are optional when layout is used
     positions: [
-      { id: 'pos1', label: 'Past', x: 20, y: 80 },
-      { id: 'pos2', label: 'Present', x: 140, y: 80 },
-      { id: 'pos3', label: 'Future', x: 260, y: 80 }
+      { id: 'pos1', label: 'Past', xPct: 0.2, yPct: 0.35 },
+      { id: 'pos2', label: 'Present', xPct: 0.5, yPct: 0.35 },
+      { id: 'pos3', label: 'Future', xPct: 0.8, yPct: 0.35 }
     ]
+    , layout: 'row', yPct: 0.35
   },
   celticCross: {
     name: 'Celtic Cross',
-    description: 'Situation, Challenge, Goal, Past, Recent, Future, Self, House, Hopes, Outcome',
+    description: 'Core cross (center + 4 around) and vertical pillar to the right',
+    // use 'cross' layout for the center cluster and then a 'pillar' on the right
     positions: [
-      { id: 'pos1', label: 'Situation', x: 120, y: 20 },
-      { id: 'pos2', label: 'Challenge', x: 120, y: 150 },
-      { id: 'pos3', label: 'Goal', x: 30, y: 85 },
-      { id: 'pos4', label: 'Past', x: 210, y: 85 },
-      { id: 'pos5', label: 'Self', x: 30, y: 220 },
-      { id: 'pos6', label: 'Recent', x: 210, y: 220 },
-      { id: 'pos7', label: 'Future', x: 30, y: 310 },
-      { id: 'pos8', label: 'House', x: 120, y: 310 },
-      { id: 'pos9', label: 'Hopes', x: 210, y: 310 },
-      { id: 'pos10', label: 'Outcome', x: 120, y: 400 }
+      // central cross (center, right, left, top, bottom)
+      { id: 'pos1', label: 'Situation', xPct: 0.45, yPct: 0.35 },
+      { id: 'pos2', label: 'Challenge', xPct: 0.57, yPct: 0.35 },
+      { id: 'pos3', label: 'Goal', xPct: 0.33, yPct: 0.35 },
+      { id: 'pos4', label: 'Past', xPct: 0.45, yPct: 0.20 },
+      { id: 'pos5', label: 'Self', xPct: 0.45, yPct: 0.50 },
+      // right-hand pillar (stacked, spaced to avoid overlap)
+      { id: 'pos6', label: 'Recent', xPct: 0.78, yPct: 0.18 },
+      { id: 'pos7', label: 'Future', xPct: 0.78, yPct: 0.30 },
+      { id: 'pos8', label: 'House', xPct: 0.78, yPct: 0.42 },
+      { id: 'pos9', label: 'Hopes', xPct: 0.78, yPct: 0.54 },
+      { id: 'pos10', label: 'Outcome', xPct: 0.78, yPct: 0.66 }
     ]
+    , layout: 'cross_pillar', centerPct: { x: 0.5, y: 0.35 }
   },
   fiveCard: {
     name: 'Five Card Spread',
     description: 'Past, Present, Future, Advice, Outcome',
     positions: [
-      { id: 'pos1', label: 'Past', x: 20, y: 80 },
-      { id: 'pos2', label: 'Present', x: 100, y: 50 },
-      { id: 'pos3', label: 'Future', x: 180, y: 80 },
-      { id: 'pos4', label: 'Advice', x: 60, y: 180 },
-      { id: 'pos5', label: 'Outcome', x: 140, y: 180 }
+      { id: 'pos1', label: 'Past' },
+      { id: 'pos2', label: 'Present' },
+      { id: 'pos3', label: 'Future' },
+      { id: 'pos4', label: 'Advice' },
+      { id: 'pos5', label: 'Outcome' }
     ]
+    , layout: 'row', yPct: 0.35
   },
   horseShoe: {
     name: 'Horseshoe Spread',
     description: 'Past, Present, Future, Obstacles, Advice, Outcome',
+    // positions defined by order; layout will place them along an arc
     positions: [
-      { id: 'pos1', label: 'Past', x: 20, y: 20 },
-      { id: 'pos2', label: 'Present', x: 20, y: 120 },
-      { id: 'pos3', label: 'Future', x: 20, y: 220 },
-      { id: 'pos4', label: 'Obstacles', x: 120, y: 220 },
-      { id: 'pos5', label: 'Advice', x: 220, y: 120 },
-      { id: 'pos6', label: 'Outcome', x: 220, y: 20 }
+      { id: 'pos1', label: 'Past' },
+      { id: 'pos2', label: 'Present' },
+      { id: 'pos3', label: 'Future' },
+      { id: 'pos4', label: 'Obstacles' },
+      { id: 'pos5', label: 'Advice' },
+      { id: 'pos6', label: 'Outcome' }
     ]
+    , layout: 'horseshoe', centerPct: { x: 0.5, y: 0.32 }
   }
 };
+
+// Base canvas size used when designing the templates. Positions in templates
+// were created against this baseline; SpreadBuilder will scale them to the
+// actual canvas size at runtime so templates adapt to different screen sizes.
+export const TEMPLATE_BASE = { width: 360, height: 500 };

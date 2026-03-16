@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function Card({ title }) {
+export default function Card({ title, width, height, style }) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { width: width || 100, height: height || 140 }, style]}>
       <Text style={styles.text}>{title}</Text>
     </View>
   );

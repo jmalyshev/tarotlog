@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Button, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, Image } from 'react-native';
+import { View, Text, Button, StyleSheet, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
 import { useStore } from '../store/useStore';
 
 export default function HomeScreen({ navigation }) {
@@ -15,7 +15,7 @@ export default function HomeScreen({ navigation }) {
 
   const containerContent = (
     <View style={styles.container}>
-      <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+      <Text style={styles.title}>TarotLog</Text>
 
       <Text style={styles.sectionTitle}>Journal Entries</Text>
       <ScrollView style={styles.list}>
@@ -57,9 +57,9 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   backgroundContainer: { flex: 1 },
   fallbackBackground: { backgroundColor: '#1a1a2e' },
-  container: { flex: 1, padding: 12 },
-  logo: { width: 220, height: 160, marginBottom: 2, marginTop: -8, alignSelf: 'center' },
-  sectionTitle: { fontSize: 24, fontWeight: '700', marginTop: 2, color: '#fff' },
+  container: { flex: 1, padding: 16 },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 12, color: '#fff' },
+  sectionTitle: { fontSize: 18, fontWeight: '600', marginTop: 12, color: '#fff' },
   list: { marginTop: 8 },
   empty: { color: '#ccc', marginTop: 8 },
   noteItem: { padding: 16, marginVertical: 8, borderRadius: 12, backgroundColor: '#fff', elevation: 3, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },

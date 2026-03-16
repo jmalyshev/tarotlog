@@ -8,19 +8,19 @@ export const useStore = create((set, get) => ({
   notes: [],
   addNote: (note) => {
     set((s) => ({ notes: [note, ...s.notes] }));
-    const pw = get().lastUnlockedPassword;
-    if (pw) saveNotesEncrypted(get().notes, pw).catch(e => console.warn('save encrypted failed', e.message));
+    // Always persist notes to SecureStore. saveNotesEncrypted currently writes
+    // plaintext JSON into SecureStore and ignores the password, so persist
+    // regardless of whether a password is set.
+    saveNotesEncrypted(get().notes).catch(e => console.warn('save encrypted failed', e.message));
   },
   setNotes: (notes) => set(() => ({ notes })),
   updateNote: (id, patch) => {
     set((s) => ({ notes: s.notes.map(n => n.id === id ? { ...n, ...patch } : n) }));
-    const pw = get().lastUnlockedPassword;
-    if (pw) saveNotesEncrypted(get().notes, pw).catch(e => console.warn('save encrypted failed', e.message));
+    saveNotesEncrypted(get().notes).catch(e => console.warn('save encrypted failed', e.message));
   },
   removeNote: (id) => {
     set((s) => ({ notes: s.notes.filter(n => n.id !== id) }));
-    const pw = get().lastUnlockedPassword;
-    if (pw) saveNotesEncrypted(get().notes, pw).catch(e => console.warn('save encrypted failed', e.message));
+    saveNotesEncrypted(get().notes).catch(e => console.warn('save encrypted failed', e.message));
   },
   // Auth/user
   user: null,
@@ -28,5 +28,13 @@ export const useStore = create((set, get) => ({
   // lastUnlockedPassword is stored in memory during session to allow saving encrypted notes
   lastUnlockedPassword: null,
   setLastUnlockedPassword: (p) => set(() => ({ lastUnlockedPassword: p })),
+  // Temporary storage for cross-screen returns (used instead of passing functions in navigation params)
+  pendingSpreads: {},
+  setPendingSpread: (key, cards) => set((s) => ({ pendingSpreads: { ...s.pendingSpreads, [key]: cards } })),
+  clearPendingSpread: (key) => set((s) => {
+    const next = { ...s.pendingSpreads };
+    delete next[key];
+    return { pendingSpreads: next };
+  }),
   // add more store actions as needed
 }));
